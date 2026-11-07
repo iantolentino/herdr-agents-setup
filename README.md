@@ -1,4 +1,4 @@
-# Herdr subscription agent team for Windows
+# Herdr subscription agent team for Windows 
 
 Double-click a BAT file to open **Herdr with five agent tabs**. Give your task to
 the orchestrator; it delegates coding, review, testing and release preparation.

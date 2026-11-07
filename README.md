@@ -1,215 +1,145 @@
-# AI Coding System - Coder + Reviewer Agent
+# Herdr subscription agent team for Windows
 
-A dual-terminal AI coding system with agentic coder and senior-level code reviewer.
+Double-click a BAT file to open **Herdr with five agent tabs**. Give your task to
+the orchestrator; it delegates coding, review, testing and release preparation.
+Uses the official **Codex CLI and Claude Code** with account login. No OpenCode,
+Python API router, or API-key rotation is needed.
 
----
+## First setup
 
-## ⚡ Quick Install (One Command)
+1. Clone this repository or download its ZIP and extract it.
+2. Double-click **setup.bat**. It installs missing Herdr/Core, Codex and Claude Code.
+   Git and Node.js LTS are installed through winget when needed. Windows or an
+   installer may request elevation. Without winget, it tells you what to install.
+3. Choose which account(s) to log into. Use **ChatGPT** for Codex and your **Claude
+   subscription account**, not API/Console billing, for Claude Code. You may skip
+   login and do it later with `codex login` or `claude auth login`.
+4. Create a folder for your program (or use an existing project). Double-click
+   **launch.bat**, enter its full folder path, and choose Codex, Claude or mixed.
+5. Complete first-use trust/permission prompts in the tabs. Give your request to
+   **orchestrator**. Subsequent double-clicks remember the last project/profile
+   and focus an existing team instead of duplicating it.
 
-Open **PowerShell** and run:
+Requirements: Windows x64, Windows PowerShell 5.1+, internet, and an active plan
+that includes the selected coding client. Herdr App and Herdr TUI are different
+products; this repository targets **Herdr App (`herdr-app`) and Core (`hc`)**.
+
+## The team
+
+| Tab | Responsibility | Mixed profile |
+| --- | --- | --- |
+| orchestrator | Plans, assigns work, integrates results, keeps handoff notes | Claude |
+| coder | Implements scoped changes; default sole source writer | Codex |
+| reviewer | Independent code review and concrete findings | Claude |
+| tester | Checks acceptance criteria, tests and product flows | Codex |
+| deployer | Build/release preparation; deploys when you authorize the target | Codex |
+
+Codex-only and Claude-only profiles use that provider for all five roles.
+Five is a deliberate limit: no recursive agent spawning. The role instructions
+coordinate a shared working folder so workers do not compete to edit the same
+files. Review/testing happens after the coder pauses changes. Agent behavior is
+instruction-driven, not a deterministic workflow engine or a guarantee of correctness.
+The clients retain their normal permission prompts; login, trust, approvals and
+quota errors can still require your attention. No bypass-all-permissions flags.
+
+Example task for the orchestrator:
+
+> Build a task tracker in this project. Plan first, assign implementation to the
+> coder, have the reviewer and tester verify it, fix their findings, then have
+> the deployer prepare deployment instructions. Keep HANDOFF.md current.
+
+## Launch another project or choose a provider
+
+From CMD in this repository:
+
+```bat
+launch.bat -Project "C:\Projects\My App" -Profile codex
+launch.bat -Project "C:\Projects\My App" -Profile claude
+launch.bat -Project "C:\Projects\My App" -Profile mixed
+```
+
+PowerShell equivalent:
 
 ```powershell
-iex (irm https://raw.githubusercontent.com/iantolentino/opencode-agents-setup/main/install.ps1)
+.\scripts\Start-Team.ps1 -Project 'C:\Projects\My App' -Profile claude
 ```
 
-That's it. The installer will:
-1. Clone this repo to `C:\Users\YourName\opencode-agents`
-2. Install Python dependencies
-3. Prompt for your API keys (loop to add multiple)
-4. Launch both agents automatically in 2 terminals
+Before changing the whole team's provider, ask the orchestrator to update its
+handoff notes and finish/stop active work, then:
 
-**Next time on any machine:** Just run the same command above. If config exists, it skips setup and launches directly.
-
----
-
-## Features
-
-- **🤖 Coder Agent**: Agentic coding assistant (reads files, plans, writes code)
-- **👁️ Reviewer Agent**: Senior-level code review (architecture, security, performance)
-- **🔄 Auto-Rotating APIs**: Seamlessly switches between free APIs when limits are reached
-- **📊 Token Tracking**: Daily usage stats per API
-- **🎯 Easy Setup**: One-command install from anywhere
-
----
-
-## Prerequisites
-
-- Python 3.8+ (install from [python.org](https://python.org) — check **Add to PATH**)
-- Git (install from [git-scm.com](https://git-scm.com))
-- PowerShell (built-in on Windows 11)
-- At least one free API key:
-  - [Google Gemini](https://aistudio.google.com) — 1,500 requests/day free, no credit card
-  - [DeepSeek](https://platform.deepseek.com) — 5M token grant on signup (30 days)
-  - [Groq](https://console.groq.com) — Free tier available
-  - [Amazon Q](https://aws.amazon.com/codewhisperer/) — 50 agentic requests/day free
-
----
-
-## Usage
-
-### Before Launching
-
-`cd` to your project folder first in both terminals after they open:
-
-```bash
-cd C:\Users\Soyk\Projects\myapp
+```bat
+stop.bat -Project "C:\Projects\My App"
+launch.bat -Project "C:\Projects\My App" -Profile claude
 ```
 
-The agents work on whatever directory you're in.
+`stop.bat` ends this team's processes (including unfinished work). It preserves
+project files and notes. It checks terminal ownership and never stops the entire
+Herdr server. Quitting Herdr's window alone does **not** stop the agents.
 
----
+For one role, exit its coding client normally; the wrapper offers `codex`,
+`claude`, or `q`. The new provider starts a fresh conversation and reads the
+same shared handoff notes. This is **manual switching**, not automatic quota
+detection, conversation transfer, or extra subscription allowance. The roster's
+provider fields record the launch profile; per-tab switches keep the same terminal
+ID but do not rewrite that profile.
 
-### Terminal 1: Coder Agent
+## Subscriptions and login
 
-```
-🤖 Coder Agent - Ready
-Working directory: C:\Users\Soyk\Projects\myapp
+- Codex can use your ChatGPT subscription via `codex login`. This launcher
+  requires ChatGPT login and starts Codex with `--no-daemon` for Herdr messaging.
+- Claude Code can use an eligible active Claude subscription via `claude auth
+  login`. Your Claude subscription is independent of your Codex access, so you
+  can select Claude-only after Codex expires, provided Claude access is active.
+- Five sessions share your account's applicable usage limits. They do not grant
+  five separate quotas. Login success does not prove quota remains.
+- Setup does not collect or copy credentials. Official clients store their own
+  credentials. Launch wrappers remove common API-key/provider environment
+  overrides **only from their process**; existing user/system settings remain.
+  Custom client settings can still affect auth and behavior: check `/status` in
+  Claude if you previously configured API billing or a custom gateway.
 
-Commands:
-  read <filepath>       - Read a file
-  list [directory]      - List files
-  write <filepath>      - Write/create file
-  status                - Show API status
-  help                  - Show this help
-  exit                  - Exit agent
+Sources: [OpenAI authentication](https://learn.chatgpt.com/docs/auth),
+[Claude subscription access](https://support.claude.com/en/articles/11145838-use-claude-code-with-your-pro-max-or-ultra-plan),
+[Herdr guide](https://herdr.dev/guide/).
 
-you> refactor this function to use async/await
-you> read src/app.js
-you> list
-you> help me optimize this database query
-you> status
-```
+## State and recovery
 
----
+Local state lives at `%LOCALAPPDATA%\HerdrAgentTeams\<project-hash>\`:
 
-### Terminal 2: Reviewer Agent
+- `team.json`: exact space/tab/terminal IDs and initial provider mapping.
+- `HANDOFF.md`: durable task context written by the orchestrator.
+- A run-specific folder holds role configs, operating instructions and reports.
+- `launcher.json` in the parent folder remembers the last successful selection.
 
-```
-👁️  Reviewer Agent - Ready
-Working directory: C:\Users\Soyk\Projects\myapp
+No project instruction files are overwritten. A per-project file lock prevents
+double-click races. Partial creation is retained for inspection, not silently
+treated as success. Use `stop.bat` before retrying a partial team. After a reboot,
+Herdr may restore shell panes, not active AI conversations; stop the old team and
+launch fresh, then ask the orchestrator to continue from HANDOFF.md.
 
-Commands:
-  review <filepath>     - Review a file
-  read <filepath>       - Read a file
-  list [directory]      - List files
-  status                - Show API status
-  help                  - Show this help
-  exit                  - Exit agent
+## Verification and troubleshooting
 
-reviewer> review src/auth.js
-reviewer> what are security considerations for this?
-reviewer> read src/api.js
-reviewer> status
-```
+```powershell
+# Checks actual tab creation, task delivery, argument quoting, reuse and cleanup.
+# Opens its own temporary Herdr space. No AI calls or login required.
+powershell -NoProfile -ExecutionPolicy Bypass -File tests\Smoke.ps1
 
----
-
-## API Keys
-
-### Getting Free Keys
-
-| Provider  | Link                              | Limit               | Notes              |
-| --------- | --------------------------------- | ------------------- | ------------------ |
-| Gemini    | https://aistudio.google.com       | 1,500 requests/day  | Permanent free ✅  |
-| DeepSeek  | https://platform.deepseek.com     | 5M tokens (30 days) | Then pay-per-token |
-| Groq      | https://console.groq.com          | Varies              | Free tier          |
-| Amazon Q  | AWS Console → Amazon Q            | 50 agentic reqs/day | AWS account needed |
-
-### Adding Keys
-
-During install, the prompt loops:
-```
-Provider (gemini/deepseek/groq/amazon-q): gemini
-Paste API Key: AIza...
-Add another API key? (y/n): y
-
-Provider (gemini/deepseek/groq/amazon-q): groq
-Paste API Key: gsk_...
-Add another API key? (y/n): n
+# Install/check clients without opening account login:
+.\setup.bat -SkipLogin
 ```
 
-Keys are saved locally in `config.json` — **never pushed to GitHub**.
+- **Not logged in / expired access:** log into the appropriate client or choose
+  the other provider. There is no automatic fallback to paid API calls.
+- **Trust or permission screen:** resolve it in that tab. The launcher never
+  types approval answers automatically. An idle status isn't proof of readiness.
+- **Missing executable:** run setup.bat again. Existing tools are preserved;
+  update old clients using their official updater if needed.
+- **`pwsh.exe` not found:** Herdr was likely started by an app with a temporary
+  PowerShell runtime PATH. Close the Herdr window (agents keep running) and run
+  launch.bat again. The launcher starts Herdr using the persistent Windows PATH.
+- **Permission blocks `hc`:** approve the specific coordination command in the
+  client's normal permission UI. Sandbox settings aren't silently disabled.
+- **Repo renamed:** clone the new GitHub URL. Scripts use their own directory,
+  so their operation does not depend on the repository's GitHub name.
 
----
-
-## How Auto-Rotation Works
-
-1. Uses first available API with quota remaining
-2. When daily limit hit → automatically switches to next API
-3. Seamless: no interruption to your session
-4. Use `status` command to see remaining quota per API
-
----
-
-## config.json (Local Only, Never Committed)
-
-Auto-generated after setup:
-
-```json
-{
-  "apis": [
-    {
-      "name": "gemini-1",
-      "provider": "gemini",
-      "api_key": "your-key-here",
-      "daily_limit": 1500,
-      "daily_used": 0
-    }
-  ],
-  "setup_complete": true
-}
-```
-
-Daily usage resets automatically each day.
-
----
-
-## File Structure
-
-```
-opencode-agents/
-├── install.ps1             # One-command installer
-├── launch.bat              # Manual launcher (Windows)
-├── coder.py                # Coder agent
-├── reviewer.py             # Reviewer agent
-├── config_manager.py       # Manages API keys
-├── api_router.py           # API selection & rotation
-├── token_tracker.py        # Usage tracking
-├── requirements.txt        # Python dependencies
-├── config.json             # YOUR KEYS (auto-generated, git-ignored)
-├── tracker.json            # Usage stats (auto-generated, git-ignored)
-├── .gitignore              # Prevents key leaks
-└── README.md               # This file
-```
-
----
-
-## Troubleshooting
-
-**"Python not found"**
-→ Install from python.org, check "Add Python to PATH"
-
-**"git is not recognized"**
-→ Install from git-scm.com
-
-**"No API keys configured"**
-→ Re-run the install command and add keys when prompted
-
-**"All APIs have reached daily limits"**
-→ Wait for daily reset, or add more free API keys
-
----
-
-## Security
-
-⚠️ `config.json` contains your API keys — it is **git-ignored** and never pushed to GitHub.
-
-- Keys stay only on your machine
-- If you switch machines, re-run the install command and add keys again
-- Regenerate keys if accidentally exposed
-
----
-
-## License
-
-MIT — Use freely, modify as needed.
+The previous API-based Python scripts remain recoverable in Git history.

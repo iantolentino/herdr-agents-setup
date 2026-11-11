@@ -34,7 +34,7 @@ products; this repository targets **Herdr App (`herdr-app`) and Core (`hc`)**.
 | tester | Checks acceptance criteria, tests and product flows | Codex |
 | deployer | Build/release preparation; deploys when you authorize the target | Codex |
 
-Codex-only and Claude-only profiles use that provider for all five roles.
+Codex-only and Claude-only profiles use that provider for all five roles. 
 Five is a deliberate limit: no recursive agent spawning. The role instructions
 coordinate a shared working folder so workers do not compete to edit the same
 files. Review/testing happens after the coder pauses changes. Agent behavior is

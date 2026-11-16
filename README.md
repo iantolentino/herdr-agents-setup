@@ -26,7 +26,7 @@ products; this repository targets **Herdr App (`herdr-app`) and Core (`hc`)**.
 
 ## The team
 
-| Tab | Responsibility | Mixed profile |
+| Tab | Responsibility | Mixed profile | 
 | --- | --- | --- |
 | orchestrator | Plans, assigns work, integrates results, keeps handoff notes | Claude |
 | coder | Implements scoped changes; default sole source writer | Codex |

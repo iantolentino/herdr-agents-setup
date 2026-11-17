@@ -1,7 +1,7 @@
 # Herdr subscription agent team for Windows 
 
 Double-click a BAT file to open **Herdr with five agent tabs**. Give your task to
-the orchestrator; it delegates coding, review, testing and release preparation.
+the orchestrator; it delegates coding, review, testing and release preparation. 
 Uses the official **Codex CLI and Claude Code** with account login. No OpenCode,
 Python API router, or API-key rotation is needed.
 

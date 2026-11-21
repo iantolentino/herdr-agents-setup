@@ -31,7 +31,7 @@ products; this repository targets **Herdr App (`herdr-app`) and Core (`hc`)**.
 | orchestrator | Plans, assigns work, integrates results, keeps handoff notes | Claude |
 | coder | Implements scoped changes; default sole source writer | Codex |
 | reviewer | Independent code review and concrete findings | Claude |
-| tester | Checks acceptance criteria, tests and product flows | Codex |
+| tester | Checks acceptance criteria, tests and product flows | Codex | 
 | deployer | Build/release preparation; deploys when you authorize the target | Codex |
 
 Codex-only and Claude-only profiles use that provider for all five roles. 

@@ -1,13 +1,16 @@
 [CmdletBinding()]
-param([string]$Project, [ValidateSet('codex','claude','mixed')][string]$Profile, [switch]$SmokeTest)
+param([string]$Project, [string]$Profile, [switch]$SmokeTest)
 . "$PSScriptRoot/Common.ps1"
 Update-TeamPath
+$config = Get-TeamConfig
+# Validate an explicit profile before touching Herdr.
+if ($Profile) { $null = Resolve-TeamProfile $config $Profile }
 $preferences = Join-Path $env:LOCALAPPDATA 'HerdrAgentTeams/launcher.json'
 if (-not $Project -and (Test-Path -LiteralPath $preferences)) {
     $last = Get-Content -LiteralPath $preferences -Raw | ConvertFrom-Json
     if (Test-Path -LiteralPath $last.project -PathType Container) {
         $Project = $last.project
-        if (-not $Profile) { $Profile = $last.profile }
+        if (-not $Profile -and $last.profile -and $config.Profiles.Contains([string]$last.profile)) { $Profile = $last.profile }
     }
 }
 $Project = Resolve-Project $Project
@@ -50,7 +53,7 @@ try {
                 if (-not $owner -or $owner.Value -ne $old.runId) { throw 'Saved terminal IDs now belong to a different session. Inspect the saved team.json before proceeding.' }
             }
             if ($Profile -and $Profile -ne $old.profile) { throw 'A team is still running. Run stop.bat for this project before changing provider.' }
-            if ($owned.Count -ne 5 -or -not $old.ready) { throw 'A partial team exists. Inspect it in Herdr, then use stop.bat before relaunching.' }
+            if ($owned.Count -ne @($old.roles).Count -or -not $old.ready) { throw 'A partial team exists. Inspect it in Herdr, then use stop.bat before relaunching.' }
             if ([bool]$old.smokeTest -ne [bool]$SmokeTest) { throw 'A different test/live mode is running. Stop that team before changing modes.' }
             $null = Invoke-App 'agent.focus' @{terminal=$old.roles[0].terminal}
             Write-Host "Reopened the existing $($old.profile) team. No duplicate agents created."
@@ -58,24 +61,27 @@ try {
         }
     }
     if (-not $Profile) {
-        $choice = Read-Host 'Provider: 1 = Codex, 2 = Claude, 3 = mixed (Claude lead/reviewer; Codex others) [1]'
-        $Profile = switch ($choice) { '2' { 'claude' }; '3' { 'mixed' }; '' { 'codex' }; '1' { 'codex' }; default { throw 'Choose 1, 2, or 3.' } }
+        $names = @(Get-ProfileNames $config)
+        $defaultIndex = [array]::IndexOf($names, [string]$config.DefaultProfile) + 1
+        if ($defaultIndex -lt 1) { $defaultIndex = 1 }
+        Write-Host 'Profiles:'
+        for ($i = 0; $i -lt $names.Count; $i++) { Write-Host ("  {0} = {1}: {2}" -f ($i + 1), $names[$i], $config.Profiles[$names[$i]].Description) }
+        $choice = Read-Host "Choose a profile [$defaultIndex]"
+        if (-not $choice) { $choice = [string]$defaultIndex }
+        $number = 0
+        if ([int]::TryParse($choice, [ref]$number) -and $number -ge 1 -and $number -le $names.Count) { $Profile = $names[$number - 1] }
+        elseif ($config.Profiles.Contains($choice)) { $Profile = $choice }
+        else { throw "Choose 1-$($names.Count) or a profile name." }
     }
-    $providers = if ($Profile -eq 'mixed') { @('codex','claude') } else { @($Profile) }
+    $roster = @(Resolve-TeamProfile $config $Profile)
     if (-not $SmokeTest) {
         Clear-ProviderEnvironment
-        foreach ($provider in $providers) {
-            $exe = Find-Tool $provider
-            if (-not $exe) { throw "$provider is missing. Run setup.bat first." }
-            if ($provider -eq 'codex') {
-                $auth = Invoke-Native $exe @('login','status') -IncludeStderr
-                if ($auth -notmatch 'ChatGPT') { throw 'Run codex login and sign in with ChatGPT before launching.' }
-                $help = Invoke-Native $exe @('--help')
-                if ($help -notmatch '--no-daemon') { throw 'Update Codex first: this Herdr setup requires --no-daemon.' }
-            } else {
-                $auth = Invoke-Native $exe @('auth','status') | ConvertFrom-Json
-                if (-not $auth.loggedIn -or $auth.authMethod -ne 'claude.ai') { throw 'Run claude auth login and choose your Claude subscription account first.' }
-            }
+        foreach ($name in @($roster | ForEach-Object { $_.provider } | Select-Object -Unique)) {
+            $provider = Get-Provider $name
+            $exe = Find-Tool $provider.Tool
+            if (-not $exe) { throw "$(Get-ProviderLabel $provider) ($($provider.Tool)) is missing. Run setup.bat -Providers $name first." }
+            $status = & $provider.TestReady $exe
+            if ($status) { Write-Host $status }
         }
     }
     $runId = [guid]::NewGuid().ToString('N')
@@ -86,13 +92,13 @@ try {
     }
     $handoff = Join-Path $teamDir 'HANDOFF.md'
     if (-not (Test-Path -LiteralPath $handoff)) { [IO.File]::WriteAllText($handoff, "# Team handoff`r`n`r`nNo task assigned yet. The orchestrator maintains this file.`r`n") }
-    $state = [ordered]@{version=1; project=$Project; profile=$Profile; runId=$runId; directory=$runDir; space=''; ready=$false; smokeTest=[bool]$SmokeTest; roles=@()}
+    $state = [ordered]@{version=2; project=$Project; profile=$Profile; runId=$runId; directory=$runDir; space=''; ready=$false; smokeTest=[bool]$SmokeTest; roles=@()}
     Save-Json $manifestPath $state
-    $roles = @('orchestrator','coder','reviewer','tester','deployer')
-    foreach ($role in $roles) {
-        $provider = if ($Profile -eq 'mixed') { if ($role -in @('orchestrator','reviewer')) { 'claude' } else { 'codex' } } else { $Profile }
+    foreach ($entry in $roster) {
+        $role = $entry.role
+        $provider = $entry.provider
         $roleFile = Join-Path $runDir "$role.json"
-        Save-Json $roleFile @{role=$role; provider=$provider; project=$Project; manifest=$manifestPath; directory=$runDir; smokeTest=[bool]$SmokeTest}
+        Save-Json $roleFile @{role=$role; provider=$provider; project=$Project; manifest=$manifestPath; directory=$runDir; smokeTest=[bool]$SmokeTest; teamSize=$roster.Count; sessionId=[guid]::NewGuid().ToString(); options=(Get-RoleOptions $config $provider $role)}
         $wrapper = Join-Path $PSScriptRoot 'Run-Agent.ps1'
         # Encode only the invocation; arbitrary folder names never become executable code.
         $command = "& '" + $wrapper.Replace("'","''") + "' -Config '" + $roleFile.Replace("'","''") + "'"
@@ -113,7 +119,7 @@ try {
     [IO.File]::WriteAllText((Join-Path $runDir 'ready'), 'ready')
     $null = Invoke-App 'agent.focus' @{terminal=$state.roles[0].terminal}
     if (-not $SmokeTest) { Save-Json $preferences @{project=$Project;profile=$Profile} }
-    Write-Host "Opened five $Profile agent tabs. Give your task to the orchestrator."
+    Write-Host "Opened $($roster.Count) agent tabs ($Profile profile). Give your task to the orchestrator."
     Write-Host 'Complete any first-run login/trust prompts in each tab. Permission prompts are not auto-accepted.'
     Write-Host "Team state and handoff notes: $teamDir"
 } finally { if ($lock) { $lock.Dispose() } }

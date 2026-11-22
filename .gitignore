@@ -4,3 +4,4 @@ tracker.json
 .env.*
 *.log
 .local/
+config/team.local.psd1

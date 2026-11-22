@@ -6,7 +6,7 @@ Uses the official **Codex CLI and Claude Code** with account login. No OpenCode,
 Python API router, or API-key rotation is needed.
 
 ## First setup  
-
+ 
 1. Clone this repository or download its ZIP and extract it.
 2. Double-click **setup.bat**. It installs missing Herdr/Core, Codex and Claude Code.
    Git and Node.js LTS are installed through winget when needed. Windows or an

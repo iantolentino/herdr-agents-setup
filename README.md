@@ -1,7 +1,7 @@
 # Herdr subscription agent team for Windows
 
 Double-click a BAT file to open **Herdr with an agent team in tabs**. Give your
-task to the orchestrator; it delegates coding, review, testing and release
+task to the orchestrator; it delegates coding, review, testing and release 
 preparation. Uses official coding clients with **subscription login**: Claude
 Code by default, Codex optional. No API keys, router or key rotation needed.
 AI clients are plug-ins; see [Adding another AI](#adding-another-ai).
